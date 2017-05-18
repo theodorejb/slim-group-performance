@@ -1,0 +1,14 @@
+{
+    "name": "theodorejb/slim-route-group-perf",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Theodore Brown",
+            "email": "theodorejb@outlook.com"
+        }
+    ],
+    "require": {
+        "slim/slim": "^3.8"
+    }
+}
