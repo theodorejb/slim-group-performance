@@ -15,7 +15,7 @@ function initRoutes($base, $generateUnmatchableRoutes = true)
     $startTime = microtime(true);
     $app = new App();
     $groupCount = 50;
-    $subgroupCount = 50;
+    $subgroupCount = 25;
     $initTime = 0;
     $totalRoutes = 0;
 
@@ -30,7 +30,7 @@ function initRoutes($base, $generateUnmatchableRoutes = true)
             }
 
             for ($s = 1; $s <= $subgroupCount; $s++) {
-                $app->group("/sub{$s}", endpointFactory($app, $groupCount, $startTime, $initTime, $totalRoutes));
+                $app->group("/sub{$s}", endpointFactory($app, $g, $s, $groupCount, $startTime, $initTime, $totalRoutes));
             }
         });
     }
@@ -39,22 +39,34 @@ function initRoutes($base, $generateUnmatchableRoutes = true)
     $app->run();
 }
 
-function endpointFactory(App $app, $groupCount, $startTime, &$initTime, &$totalRoutes)
+function endpointFactory(App $app, $g, $s, $groupCount, $startTime, &$initTime, &$totalRoutes)
 {
-    // a real world app would often use an ORM to generate get/post/patch/update/delete methods for each endpoint
-    $routeCount = 6;
-    $totalRoutes += $routeCount;
+    $totalRoutes += 6;
+    // A real world app would often use an ORM to generate get/post/patch/update/delete methods for each endpoint.
+    // The ORM would be passed a unique class name for each subgroup, which it would use inside route callbacks.
+    $class = "class" . md5($g * $s);
 
-    return function () use ($app, $groupCount, $routeCount, $startTime, &$initTime, &$totalRoutes) {
-        for ($r = 1; $r <= $routeCount; $r++) {
-            $app->get("/route{$r}", function (Request $request, Response $response) use ($groupCount, $startTime, &$initTime, &$totalRoutes) {
-                return $response->withJson([
-                    'totalGroups' => $groupCount,
-                    'generatedRoutes' => $totalRoutes,
-                    'initTime' => $initTime,
-                    'responseTime' => microtime(true) - $startTime,
-                ]);
-            });
-        }
+    return function () use ($app, $class, $groupCount, $startTime, &$initTime, &$totalRoutes) {
+        $app->get('', routeFactory($class, 'search', $groupCount, $startTime, $initTime, $totalRoutes));
+        $app->get('/{id}', routeFactory($class, 'get by ID', $groupCount, $startTime, $initTime, $totalRoutes));
+        $app->post('', routeFactory($class, 'create', $groupCount, $startTime, $initTime, $totalRoutes));
+        $app->put('/{id}', routeFactory($class, 'update by ID', $groupCount, $startTime, $initTime, $totalRoutes));
+        $app->patch('/{id}', routeFactory($class, 'patch by ID', $groupCount, $startTime, $initTime, $totalRoutes));
+        $app->delete('/{id}', routeFactory($class, 'delete by ID', $groupCount, $startTime, $initTime, $totalRoutes));
+    };
+}
+
+function routeFactory($class, $route, $groupCount, $startTime, &$initTime, &$totalRoutes)
+{
+    return function (Request $request, Response $response, array $args) use ($class, $route, $groupCount, $startTime, &$initTime, &$totalRoutes) {
+        return $response->withJson([
+            'class' => $class,
+            'route' => $route,
+            'args' => $args,
+            'totalGroups' => $groupCount,
+            'generatedRoutes' => $totalRoutes,
+            'initTime' => $initTime,
+            'responseTime' => microtime(true) - $startTime,
+        ]);
     };
 }
